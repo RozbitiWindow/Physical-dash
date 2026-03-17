@@ -1,0 +1,139 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+
+public class GDCubeController : MonoBehaviour
+{
+    [Header("Pohyb")]
+    [SerializeField] private float moveSpeed = 10f;
+
+    [Header("Skok")]
+    [SerializeField] private float jumpForce = 10f;
+
+    [Header("Rotace")]
+    [SerializeField] private float rotationSpeed = 400f;
+
+    [Header("Fyzika")]
+    [SerializeField] private float cubeGravityScale = 3f;
+
+    [Header("Detekce")]
+    [SerializeField] private LayerMask groundMask;
+    [SerializeField] private float groundCheckRadius = 0.1f;
+
+    private Rigidbody2D rb;
+    private float currentAngle = 0f;
+    // Vlastní úhel rotace — nepotřebujeme child Sprite objekt
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = cubeGravityScale;
+        rb.freezeRotation = true;
+    }
+
+    void Update()
+    {
+        HandleMovement();
+        HandleCube();
+        LimitFallSpeed();
+        HandleWallHit();
+    }
+
+    void HandleMovement()
+    {
+        transform.position += Vector3.right * moveSpeed * Time.deltaTime;
+    }
+
+    void HandleCube()
+    {
+        if (OnGrounded())
+        {
+            // Na zemi — snap na nejbližší 90°
+            currentAngle = Mathf.Round(currentAngle / 90f) * 90f;
+            transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
+
+            bool jumpHeld =
+                Mouse.current.leftButton.isPressed ||
+                Keyboard.current.spaceKey.isPressed ||
+                Keyboard.current.upArrowKey.isPressed;
+
+            if (jumpHeld)
+                Jump();
+        }
+        else
+        {
+            // Ve vzduchu — točíme se
+            // freezeRotation zabraňuje fyzice točit objektem
+            // ale MY můžeme měnit transform.rotation přímo
+            currentAngle -= rotationSpeed * Time.deltaTime;
+            transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
+        }
+    }
+
+    void Jump()
+    {
+        rb.velocity = Vector2.zero;
+        rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+    }
+
+    bool OnGrounded()
+    {
+        Vector3 checkPosition = transform.position + Vector3.down * 0.5f;
+        Vector2 checkSize = new Vector2(0.9f, groundCheckRadius);
+        return Physics2D.OverlapBox(checkPosition, checkSize, 0f, groundMask);
+    }
+
+    bool TouchWall()
+    {
+        Vector2 position = (Vector2)transform.position + Vector2.right * 0.55f;
+        Vector2 size = new Vector2(groundCheckRadius * 2f, 0.7f);
+        // 0.7f místo 0.8f — trochu menší box, méně false detekce
+
+        // Zkontrolujeme jestli je zeď VPRAVO od nás vyšší než naše nohy
+        // Tím ignorujeme zdi vlevo (WallLeft boundary)
+        Collider2D hit = Physics2D.OverlapBox(position, size, 0f, groundMask);
+
+        if (hit != null)
+        {
+            // Zabijeme pouze pokud je objekt vpravo od playera
+            // hit.bounds.min.x > transform.position.x = objekt je napravo
+            if (hit.bounds.min.x > transform.position.x - 0.1f)
+                return true;
+        }
+        return false;
+    }
+
+    void HandleWallHit()
+    {
+        if (TouchWall())
+            Die();
+    }
+
+    void LimitFallSpeed()
+    {
+        if (rb.velocity.y < -24.2f)
+            rb.velocity = new Vector2(rb.velocity.x, -24.2f);
+    }
+
+    public void Die()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        // Zelený box = detekce země
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(
+            transform.position + Vector3.down * 0.5f,
+            new Vector3(0.9f, groundCheckRadius, 0.1f)
+        );
+
+        // Modrý box = detekce zdi
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(
+            (Vector2)transform.position + Vector2.right * 0.55f,
+            new Vector3(groundCheckRadius * 2f, 0.7f, 0.1f)
+        );
+    }
+}
