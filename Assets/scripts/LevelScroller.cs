@@ -3,7 +3,7 @@ using UnityEngine;
 public class LevelScroller : MonoBehaviour
 {
     [SerializeField]
-    private float speed = 5f;
+    public float speed = 5f;
     // Rychlost pohybu světa. Změníš v Inspectoru.
 
     void Update()

@@ -1,0 +1,91 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &5386550537389069475
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 89502023372619552, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 89502023372619552, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 1.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 89502023372619552, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 1.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 391671023145511339, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 391671023145511339, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.x
+      value: 1.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 391671023145511339, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_SpriteTilingProperty.oldSize.y
+      value: 1.22
+      objectReference: {fileID: 0}
+    - target: {fileID: 1918122004090926278, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_Name
+      value: small spike
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0.35
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4.361
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -3.3992
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9001281029062260536, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -6539017073660774066, guid: cc57523d58918954a81f751361bdad31, type: 3}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
