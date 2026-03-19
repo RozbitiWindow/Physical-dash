@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4557447636450172631}
   - component: {fileID: 2826033794284704450}
   - component: {fileID: 729312472490051238}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: WavyPlatform middle
   m_TagString: Untagged
   m_Icon: {fileID: 0}

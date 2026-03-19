@@ -60,7 +60,7 @@ public class GDCubeController : MonoBehaviour
     {
         if (OnGrounded())
         {
-            // Na zemi — snap na nejbližší 90°
+            // Snap rotace
             currentAngle = Mathf.Round(currentAngle / 90f) * 90f;
             transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
 
@@ -74,21 +74,22 @@ public class GDCubeController : MonoBehaviour
         }
         else
         {
-            // Ve vzduchu — točíme se
-            // freezeRotation zabraňuje fyzice točit objektem
-            // ale MY můžeme měnit transform.rotation přímo
-            currentAngle -= rotationSpeed * Time.deltaTime;
+            // Při otočené gravitaci točíme opačným směrem
+            float direction = gravityFlipped ? -1f : 1f;
+            currentAngle -= rotationSpeed * direction * Time.deltaTime;
             transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
         }
     }
+
 
     void Jump()
     {
         rb.velocity = Vector2.zero;
 
-        // Při otočené gravitaci skáčeme dolů (záporné Y)
-        Vector2 jumpDirection = gravityFlipped ? Vector2.down : Vector2.up;
-        rb.AddForce(jumpDirection * jumpForce, ForceMode2D.Impulse);
+        // Při otočené gravitaci skáčeme DOLŮ (od stropu)
+        // Při normální gravitaci skáčeme NAHORU (od země)
+        float jumpDirection = gravityFlipped ? -1f : 1f;
+        rb.AddForce(Vector2.up * jumpForce * jumpDirection, ForceMode2D.Impulse);
     }
 
     bool OnGrounded()
@@ -104,15 +105,8 @@ public class GDCubeController : MonoBehaviour
 
     bool TouchWall()
     {
-        // Paprsek vychází VÝŠE než střed — ignoruje spodní část cube
-        // Tím když dopadáme na roh bloku, boční check ho netrefí
         Vector2 position = (Vector2)transform.position + Vector2.right * 0.55f + Vector2.up * 0.2f;
-        // Vector2.up * 0.2f = posuneme kontrolní bod výš o 20%
-        // Spodních 20% cube je "bezpečná zóna" pro přistání na rozích
-
         Vector2 size = new Vector2(groundCheckRadius * 2f, 0.5f);
-        // Výška boxu snížena z 0.7f na 0.5f
-        // Menší box = méně falešných detekcí na rozích bloků
 
         Collider2D hit = Physics2D.OverlapBox(position, size, 0f, groundMask);
 
@@ -120,13 +114,20 @@ public class GDCubeController : MonoBehaviour
         {
             if (hit.bounds.min.x > transform.position.x - 0.1f)
             {
-                // Zabijeme pouze pokud vrchol bloku sahá výš než 
-                // HORNÍ TŘETINA cube — ne polovina
-                // transform.position.y + 0.15f = horní třetina
                 float blockTop = hit.bounds.max.y;
-                if (blockTop > transform.position.y + 0.15f)
+                float blockBottom = hit.bounds.min.y;
+
+                if (!gravityFlipped)
                 {
-                    return true;
+                    // Normální gravitace — zeď zabije pokud sahá výš než horní třetina
+                    if (blockTop > transform.position.y + 0.15f)
+                        return true;
+                }
+                else
+                {
+                    // Otočená gravitace — zeď zabije pokud sahá níž než spodní třetina
+                    if (blockBottom < transform.position.y - 0.15f)
+                        return true;
                 }
             }
         }
@@ -141,8 +142,18 @@ public class GDCubeController : MonoBehaviour
 
     void LimitFallSpeed()
     {
-        if (rb.velocity.y < -24.2f)
-            rb.velocity = new Vector2(rb.velocity.x, -24.2f);
+        if (!gravityFlipped)
+        {
+            // Normální gravitace — omezíme pád dolů
+            if (rb.velocity.y < -24.2f)
+                rb.velocity = new Vector2(rb.velocity.x, -24.2f);
+        }
+        else
+        {
+            // Otočená gravitace — omezíme pád nahoru
+            if (rb.velocity.y > 24.2f)
+                rb.velocity = new Vector2(rb.velocity.x, 24.2f);
+        }
     }
 
     public void Die()
@@ -203,14 +214,15 @@ public class GDCubeController : MonoBehaviour
     {
         if (runParticles == null) return;
 
-        // Zrušíme rotaci — particles se nikdy netočí
         runParticles.transform.rotation = Quaternion.identity;
-        // Quaternion.identity = žádná rotace = 0°
 
-        // Pozice těsně u levého dolního rohu cube
+        // Normální gravitace = particles vlevo DOLE (-0.5f)
+        // Otočená gravitace = particles vlevo NAHOŘE (+0.5f)
+        float yOffset = gravityFlipped ? 0.4f : -0.4f;
+
         runParticles.transform.position = new Vector3(
-            transform.position.x - 0.5f,  // vlevo
-            transform.position.y - 0.4f,   // těsně pod středem, ne pod zemí
+            transform.position.x - 0.45f,
+            transform.position.y + yOffset,
             transform.position.z
         );
     }
@@ -221,22 +233,74 @@ public class GDCubeController : MonoBehaviour
 
         if (flipped)
         {
-            // Otočíme gravitaci — Rigidbody padá nahoru
             rb.gravityScale = -cubeGravityScale;
-
-            // Otočíme sprite — player vypadá že jede po stropě
-            transform.localScale = new Vector3(1f, -1f, 1f);
+            // Zachováme originální scale X, jen otočíme Y
+            transform.localScale = new Vector3(
+                Mathf.Abs(transform.localScale.x),   // původní X (0.6)
+                -Mathf.Abs(transform.localScale.y),  // záporné Y (-0.6)
+                transform.localScale.z               // původní Z (1)
+            );
         }
         else
         {
-            // Vrátíme normální gravitaci
             rb.gravityScale = cubeGravityScale;
-            transform.localScale = new Vector3(1f, 1f, 1f);
+            // Vrátíme originální scale
+            transform.localScale = new Vector3(
+                Mathf.Abs(transform.localScale.x),  // původní X (0.6)
+                Mathf.Abs(transform.localScale.y),  // původní Y (0.6)
+                transform.localScale.z              // původní Z (1)
+            );
+        }
+
+
+    }
+
+    public bool IsGravityFlipped()
+    {
+        // Vrátí aktuální stav gravitace
+        // Orb.cs potřebuje vědět jestli je gravitace otočená
+        return gravityFlipped;
+    }
+
+    public void OrbJump(float force, bool respectGravity)
+    {
+        // Vystřelí playera silou orbu
+        // respectGravity = true → skočí podle aktuální gravitace
+        // respectGravity = false → vždy skočí nahoru (Yellow, Blue)
+
+        rb.velocity = new Vector2(rb.velocity.x, 0f);
+        // Nulujeme jen Y velocity — X necháme
+
+        if (respectGravity)
+        {
+            // Pink orb — skočí podle aktuální gravitace
+            float direction = gravityFlipped ? -1f : 1f;
+            rb.AddForce(Vector2.up * force * direction, ForceMode2D.Impulse);
+        }
+        else
+        {
+            // Yellow/Blue orb — vždy nahoru bez ohledu na gravitaci
+            rb.AddForce(Vector2.up * force, ForceMode2D.Impulse);
         }
     }
 
-    // Uprav OnGrounded() aby fungoval i při otočené gravitaci:
-   
-    
+    public void InstantFlip()
+    {
+        // Okamžitý flip bez oblouku
+        // Nulujeme Y velocity = cube neletí obloukem
+        // Zůstane jen malá velocity ve směru nové gravitace
+        rb.velocity = new Vector2(rb.velocity.x, 0f);
+    }
+
+    public void BlackOrbDrop()
+    {
+        // Instantně shodí dolů
+        // Nulujeme Y velocity a přidáme silnou velocity dolů
+        rb.velocity = new Vector2(rb.velocity.x, -20f);
+        // -20f = rychlý pád dolů
+        // Gravitace pak zbytek dodělá sama
+    }
+
+
 
 }

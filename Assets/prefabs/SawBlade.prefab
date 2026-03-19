@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2210797888838385494}
   - component: {fileID: 8531662006636502268}
   - component: {fileID: 2100427639601898674}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: SawBlade
   m_TagString: Untagged
   m_Icon: {fileID: 0}

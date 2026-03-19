@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1329565505115377491}
   - component: {fileID: 2015129853246852924}
   - component: {fileID: 5326477181203400191}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: GroundSpikes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
