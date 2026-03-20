@@ -36,6 +36,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: small spike
       objectReference: {fileID: 0}
+    - target: {fileID: 1918122004090926278, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
+      propertyPath: m_TagString
+      value: Deadly
+      objectReference: {fileID: 0}
     - target: {fileID: 3279473288347439624, guid: 961d43b145a64e44091f40d9f6528aa6, type: 3}
       propertyPath: m_LocalScale.y
       value: 0.35

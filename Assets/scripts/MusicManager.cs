@@ -7,6 +7,11 @@ public class MusicManager : MonoBehaviour
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+        void Awake()
+        {
+            audioSource = GetComponent<AudioSource>();
+            audioSource.Play(); // spustí hudbu na startu
+        }
     }
 
     public void RestartMusic()

@@ -34,7 +34,6 @@ public class GDCubeController : MonoBehaviour
 
     [Header("Hranice — Ship/Ball/Wave")]
     [SerializeField] private float boundaryOffset = 4f;
-    // Vzdálenost hranice od playera v momentě přepnutí módu
 
     [Header("Debug")]
     [SerializeField] private bool showBoundariesInGame = true;
@@ -42,6 +41,12 @@ public class GDCubeController : MonoBehaviour
     [Header("Efekty")]
     [SerializeField] private ParticleSystem runParticles;
     [SerializeField] private LevelScroller levelScroller;
+
+    [Header("Trails — každý mód zvlášť")]
+    [SerializeField] private GameObject cubeTrailObject;
+    [SerializeField] private GameObject shipTrailObject;
+    [SerializeField] private GameObject ballTrailObject;
+    [SerializeField] private GameObject waveTrailObject;
 
     [Header("Sprity")]
     [SerializeField] private Sprite cubeSprite;
@@ -54,6 +59,17 @@ public class GDCubeController : MonoBehaviour
 
     [Header("Kamera")]
     [SerializeField] private CameraFollow cameraFollow;
+
+    [Header("Hitboxy")]
+    [SerializeField] private BoxCollider2D playerCollider;
+    [SerializeField] private Vector2 cubeColliderSize = new Vector2(0.9f, 0.9f);
+    [SerializeField] private Vector2 cubeColliderOffset = new Vector2(0f, 0f);
+    [SerializeField] private Vector2 shipColliderSize = new Vector2(1.2f, 0.5f);
+    [SerializeField] private Vector2 shipColliderOffset = new Vector2(0.1f, 0f);
+    [SerializeField] private Vector2 ballColliderSize = new Vector2(0.85f, 0.85f);
+    [SerializeField] private Vector2 ballColliderOffset = new Vector2(0f, 0f);
+    [SerializeField] private Vector2 waveColliderSize = new Vector2(0.5f, 0.5f);
+    [SerializeField] private Vector2 waveColliderOffset = new Vector2(0f, 0f);
 
     // =============================================
     // PRIVÁTNÍ PROMĚNNÉ
@@ -74,10 +90,21 @@ public class GDCubeController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (playerCollider == null)
+            playerCollider = GetComponent<BoxCollider2D>();
+
         rb.gravityScale = cubeGravityScale;
         rb.freezeRotation = true;
-        // Uložíme originální scale při startu
         originalScale = Mathf.Abs(transform.localScale.x);
+
+        UpdateCollider(ModePortal.GameMode.Cube);
+
+        // Vypni všechny traily na startu
+        if (cubeTrailObject != null) cubeTrailObject.SetActive(false);
+        if (shipTrailObject != null) shipTrailObject.SetActive(false);
+        if (ballTrailObject != null) ballTrailObject.SetActive(false);
+        if (waveTrailObject != null) waveTrailObject.SetActive(false);
     }
 
     void Update()
@@ -86,18 +113,10 @@ public class GDCubeController : MonoBehaviour
 
         switch (currentMode)
         {
-            case ModePortal.GameMode.Cube:
-                HandleCube();
-                break;
-            case ModePortal.GameMode.Ship:
-                HandleShip();
-                break;
-            case ModePortal.GameMode.Ball:
-                HandleBall();
-                break;
-            case ModePortal.GameMode.Wave:
-                HandleWave();
-                break;
+            case ModePortal.GameMode.Cube: HandleCube(); break;
+            case ModePortal.GameMode.Ship: HandleShip(); break;
+            case ModePortal.GameMode.Ball: HandleBall(); break;
+            case ModePortal.GameMode.Wave: HandleWave(); break;
         }
 
         LimitFallSpeed();
@@ -105,6 +124,63 @@ public class GDCubeController : MonoBehaviour
         HandleWallHit();
         HandleParticles();
         FixParticleTransform();
+    }
+
+    // ============================================
+    // TRAIL
+    // ============================================
+
+    void UpdateTrail(ModePortal.GameMode mode)
+    {
+        if (cubeTrailObject != null) cubeTrailObject.SetActive(false);
+        if (shipTrailObject != null) shipTrailObject.SetActive(false);
+        if (ballTrailObject != null) ballTrailObject.SetActive(false);
+        if (waveTrailObject != null) waveTrailObject.SetActive(false);
+
+        switch (mode)
+        {
+            case ModePortal.GameMode.Cube:
+                if (cubeTrailObject != null) cubeTrailObject.SetActive(true);
+                break;
+            case ModePortal.GameMode.Ship:
+                if (shipTrailObject != null) shipTrailObject.SetActive(true);
+                break;
+            case ModePortal.GameMode.Ball:
+                if (ballTrailObject != null) ballTrailObject.SetActive(true);
+                break;
+            case ModePortal.GameMode.Wave:
+                if (waveTrailObject != null) waveTrailObject.SetActive(true);
+                break;
+        }
+    }
+
+    // ============================================
+    // HITBOX
+    // ============================================
+
+    void UpdateCollider(ModePortal.GameMode mode)
+    {
+        if (playerCollider == null) return;
+
+        switch (mode)
+        {
+            case ModePortal.GameMode.Cube:
+                playerCollider.size = cubeColliderSize;
+                playerCollider.offset = cubeColliderOffset;
+                break;
+            case ModePortal.GameMode.Ship:
+                playerCollider.size = shipColliderSize;
+                playerCollider.offset = shipColliderOffset;
+                break;
+            case ModePortal.GameMode.Ball:
+                playerCollider.size = ballColliderSize;
+                playerCollider.offset = ballColliderOffset;
+                break;
+            case ModePortal.GameMode.Wave:
+                playerCollider.size = waveColliderSize;
+                playerCollider.offset = waveColliderOffset;
+                break;
+        }
     }
 
     // ============================================
@@ -153,24 +229,23 @@ public class GDCubeController : MonoBehaviour
             Keyboard.current.spaceKey.isPressed ||
             Keyboard.current.upArrowKey.isPressed;
 
-        // Cílová rychlost — nahoru když držíš, dolů když pustíš
-        float targetVelocityY;
-
+        float direction;
         if (!gravityFlipped)
-            targetVelocityY = holdingJump ? shipMaxSpeed : -shipMaxSpeed;
+            direction = holdingJump ? 1f : -1f;
         else
-            targetVelocityY = holdingJump ? -shipMaxSpeed : shipMaxSpeed;
+            direction = holdingJump ? -1f : 1f;
 
-        // Lerp = plynulá změna rychlosti — ne okamžitá
-        // shipForce teď slouží jako "citlivost" — nižší = pomalejší reakce
-        float newVelocityY = Mathf.Lerp(rb.velocity.y, targetVelocityY, Time.deltaTime * shipForce);
-
+        float newVelocityY = rb.velocity.y + direction * shipForce * Time.deltaTime;
+        newVelocityY = Mathf.Clamp(newVelocityY, -shipMaxSpeed, shipMaxSpeed);
         rb.velocity = new Vector2(rb.velocity.x, newVelocityY);
 
-        // Rotace podle směru letu
-        float targetAngle = rb.velocity.y * 3f;
-        if (gravityFlipped) targetAngle = -targetAngle;
-        currentAngle = Mathf.LerpAngle(currentAngle, targetAngle, Time.deltaTime * 10f);
+        float targetAngle;
+        if (!gravityFlipped)
+            targetAngle = rb.velocity.y * 3f;
+        else
+            targetAngle = rb.velocity.y * -3f;
+
+        currentAngle = targetAngle;
         transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
     }
 
@@ -180,7 +255,6 @@ public class GDCubeController : MonoBehaviour
 
     void HandleBall()
     {
-        // Ball se točí rychleji než cube
         currentAngle -= rotationSpeed * 1.2f * Time.deltaTime;
         transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
 
@@ -191,14 +265,11 @@ public class GDCubeController : MonoBehaviour
 
         if (jumpPressed)
         {
-            // Okamžitý gravity flip — bez delay
             bool newGravity = !gravityFlipped;
             SetGravity(newGravity);
 
-            // Okamžitá velocity změna — žádný oblouk
-            float direction = newGravity ? -1f : 1f;
-            rb.velocity = new Vector2(rb.velocity.x, ballJumpForce * direction * 1.5f);
-            // 1.5f = rychlejší odraz
+            float dir = newGravity ? -1f : 1f;
+            rb.velocity = new Vector2(rb.velocity.x, ballJumpForce * dir * 1.5f);
         }
     }
 
@@ -208,6 +279,8 @@ public class GDCubeController : MonoBehaviour
 
     void HandleWave()
     {
+        spriteRenderer.flipY = gravityFlipped;
+
         bool holdingJump =
             Mouse.current.leftButton.isPressed ||
             Keyboard.current.spaceKey.isPressed ||
@@ -224,7 +297,6 @@ public class GDCubeController : MonoBehaviour
         rb.velocity = new Vector2(rb.velocity.x, waveSpeed * verticalDirection);
 
         float targetAngle = verticalDirection * 45f;
-        if (gravityFlipped) targetAngle = -targetAngle;
         currentAngle = Mathf.LerpAngle(currentAngle, targetAngle, Time.deltaTime * 20f);
         transform.rotation = Quaternion.Euler(0f, 0f, currentAngle);
     }
@@ -250,22 +322,14 @@ public class GDCubeController : MonoBehaviour
 
         if (transform.position.y > topBoundary)
         {
-            transform.position = new Vector3(
-                transform.position.x,
-                topBoundary,
-                transform.position.z
-            );
+            transform.position = new Vector3(transform.position.x, topBoundary, transform.position.z);
             if (rb.velocity.y > 0)
                 rb.velocity = new Vector2(rb.velocity.x, 0f);
         }
 
         if (transform.position.y < bottomBoundary)
         {
-            transform.position = new Vector3(
-                transform.position.x,
-                bottomBoundary,
-                transform.position.z
-            );
+            transform.position = new Vector3(transform.position.x, bottomBoundary, transform.position.z);
             if (rb.velocity.y < 0)
                 rb.velocity = new Vector2(rb.velocity.x, 0f);
         }
@@ -278,6 +342,8 @@ public class GDCubeController : MonoBehaviour
     public void SetGameMode(ModePortal.GameMode mode, float offsetUp = 4f, float offsetDown = 4f)
     {
         currentMode = mode;
+        UpdateCollider(mode);
+        UpdateTrail(mode);
 
         switch (mode)
         {
@@ -287,6 +353,7 @@ public class GDCubeController : MonoBehaviour
                 useBoundary = false;
                 if (cameraFollow != null) cameraFollow.SetFollowY(true);
                 if (cubeSprite != null) spriteRenderer.sprite = cubeSprite;
+                spriteRenderer.flipY = false;
                 transform.localScale = new Vector3(
                     originalScale,
                     gravityFlipped ? -originalScale : originalScale,
@@ -295,18 +362,15 @@ public class GDCubeController : MonoBehaviour
                 break;
 
             case ModePortal.GameMode.Ship:
-                rb.gravityScale = gravityFlipped ? -shipGravityScale : shipGravityScale;
+                rb.gravityScale = 0f;
                 rb.freezeRotation = true;
                 useBoundary = true;
                 topBoundary = transform.position.y + offsetUp;
                 bottomBoundary = transform.position.y - offsetDown;
                 if (cameraFollow != null) cameraFollow.SetFollowY(false);
                 if (shipSprite != null) spriteRenderer.sprite = shipSprite;
-                transform.localScale = new Vector3(
-                    originalScale,
-                    gravityFlipped ? -originalScale : originalScale,
-                    1f
-                );
+                transform.localScale = new Vector3(originalScale, originalScale, 1f);
+                spriteRenderer.flipY = gravityFlipped;
                 break;
 
             case ModePortal.GameMode.Ball:
@@ -317,6 +381,7 @@ public class GDCubeController : MonoBehaviour
                 bottomBoundary = transform.position.y - offsetDown;
                 if (cameraFollow != null) cameraFollow.SetFollowY(false);
                 if (ballSprite != null) spriteRenderer.sprite = ballSprite;
+                spriteRenderer.flipY = false;
                 transform.localScale = new Vector3(
                     originalScale,
                     gravityFlipped ? -originalScale : originalScale,
@@ -332,11 +397,8 @@ public class GDCubeController : MonoBehaviour
                 bottomBoundary = transform.position.y - offsetDown;
                 if (cameraFollow != null) cameraFollow.SetFollowY(false);
                 if (waveSprite != null) spriteRenderer.sprite = waveSprite;
-                transform.localScale = new Vector3(
-                    originalScale,
-                    gravityFlipped ? -originalScale : originalScale,
-                    1f
-                );
+                transform.localScale = new Vector3(originalScale, originalScale, 1f);
+                spriteRenderer.flipY = gravityFlipped;
                 break;
         }
     }
@@ -359,9 +421,7 @@ public class GDCubeController : MonoBehaviour
 
     bool TouchWall()
     {
-        // Ship má jiný hitbox než cube
         float wallCheckHeight = currentMode == ModePortal.GameMode.Ship ? 0.3f : 0.5f;
-        // Ship = menší výška = méně falešných detekcí
 
         Vector2 position = (Vector2)transform.position + Vector2.right * 0.55f + Vector2.up * 0.1f;
         Vector2 size = new Vector2(groundCheckRadius * 2f, wallCheckHeight);
@@ -392,9 +452,7 @@ public class GDCubeController : MonoBehaviour
 
     void HandleWallHit()
     {
-        // Wave nemá wall check — létá volně mezi hranicemi
         if (currentMode == ModePortal.GameMode.Wave) return;
-
         if (TouchWall()) Die();
     }
 
@@ -426,7 +484,6 @@ public class GDCubeController : MonoBehaviour
     {
         if (runParticles == null) return;
 
-        // Wave — žádné particles
         if (currentMode == ModePortal.GameMode.Wave)
         {
             if (!runParticles.isStopped) runParticles.Stop();
@@ -484,21 +541,27 @@ public class GDCubeController : MonoBehaviour
     {
         gravityFlipped = flipped;
 
-        float scale = currentMode switch
+        if (currentMode == ModePortal.GameMode.Ship || currentMode == ModePortal.GameMode.Wave)
         {
-            ModePortal.GameMode.Ship => shipGravityScale,
-            ModePortal.GameMode.Ball => ballGravityScale,
-            ModePortal.GameMode.Wave => 0f,
-            _ => cubeGravityScale
-        };
+            rb.gravityScale = 0f;
+            transform.localScale = new Vector3(originalScale, originalScale, 1f);
+            spriteRenderer.flipY = flipped;
+        }
+        else
+        {
+            float scale = currentMode switch
+            {
+                ModePortal.GameMode.Ball => ballGravityScale,
+                _ => cubeGravityScale
+            };
+            rb.gravityScale = flipped ? -scale : scale;
 
-        rb.gravityScale = flipped ? -scale : scale;
-
-        transform.localScale = new Vector3(
-            originalScale,
-            flipped ? -originalScale : originalScale,
-            1f
-        );
+            transform.localScale = new Vector3(
+                originalScale,
+                flipped ? -originalScale : originalScale,
+                1f
+            );
+        }
     }
 
     public bool IsGravityFlipped() => gravityFlipped;
@@ -550,37 +613,50 @@ public class GDCubeController : MonoBehaviour
     }
 
     // ============================================
-    // GIZMOS — Scene view
+    // KOLIZE
     // ============================================
 
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (currentMode == ModePortal.GameMode.Wave)
+        {
+            Die();
+            return;
+        }
 
+        if (currentMode != ModePortal.GameMode.Ship) return;
 
-    /* void OnDrawGizmos()
-     {
+        foreach (ContactPoint2D contact in collision.contacts)
+        {
+            if (contact.normal.x < -0.5f)
+            {
+                Die();
+                return;
+            }
+        }
+    }
 
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Deadly"))
+        {
+            Die();
+            return;
+        }
+    }
 
-         // Žluté = preview
-         Gizmos.color = Color.green;
-         Gizmos.DrawLine(
-             new Vector3(-100, transform.position.y + boundaryOffset, 0),
-             new Vector3(100, transform.position.y + boundaryOffset, 0)
-         );
-         Gizmos.DrawLine(
-             new Vector3(-100, transform.position.y - boundaryOffset, 0),
-             new Vector3(100, transform.position.y - boundaryOffset, 0)
-         );
-     }
-    */
+    // ============================================
+    // GIZMOS
+    // ============================================
+
     void OnDrawGizmosSelected()
     {
-        // Zelený box = detekce země
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(
             transform.position + Vector3.down * 0.5f,
             new Vector3(0.9f, groundCheckRadius, 0.1f)
         );
 
-        // Modrý box = detekce zdi
         Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(
             (Vector2)transform.position + Vector2.right * 0.55f,
@@ -589,7 +665,7 @@ public class GDCubeController : MonoBehaviour
     }
 
     // ============================================
-    // HRANICE — Game view vizualizace
+    // HRANICE — Game view
     // ============================================
 
     void OnGUI()
@@ -612,8 +688,4 @@ public class GDCubeController : MonoBehaviour
             Texture2D.whiteTexture
         );
     }
-
-
-
-
 }
